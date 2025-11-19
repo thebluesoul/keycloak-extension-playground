@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1단계: Keycloak 소스 빌드
+  keycloak-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.builder
+    volumes:
+      - maven-repo:/root/.m2/repository
+      - keycloak-source:/workspace/keycloak
+    environment:
+      - KC_VERSION=19.0.3
+      - MAVEN_OPTS=-Xmx2g --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        if [ ! -f /workspace/keycloak/.build-complete ]; then
+          echo 'Keycloak 소스 빌드 시작...'
+          if [ ! -d /workspace/keycloak/.git ]; then
+            git clone https://github.com/keycloak/keycloak /workspace/keycloak
+          fi
+          cd /workspace/keycloak
+          git fetch origin --tags
+          git checkout $${KC_VERSION}
+          echo '=== Maven 빌드 시작 ==='
+          if mvn clean install -DskipTests -Dmaven.test.skip=true -T 1C; then
+            touch /workspace/keycloak/.build-complete
+            echo 'Keycloak 빌드 완료'
+          else
+            echo 'ERROR: Keycloak Maven 빌드 실패'
+            exit 1
+          fi
+        else
+          echo 'Keycloak 이미 빌드됨 (스킵)'
+        fi
+
+  # 2단계: Extension 빌드
+  extension-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.extension
+    volumes:
+      - maven-repo:/root/.m2/repository
+      - ./:/workspace
+    environment:
+      - MAVEN_OPTS=-Xmx2g
+    working_dir: /workspace
+    command: mvn clean install -DskipTests -T 1C
+
+volumes:
+  maven-repo:
+    driver: local
+  keycloak-source:
+    driver: local
+

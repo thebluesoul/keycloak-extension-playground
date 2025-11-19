@@ -1,0 +1,33 @@
+# Git
+.git/
+.gitignore
+
+# Maven
+target/
+**/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Keycloak 소스
+keycloak/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
